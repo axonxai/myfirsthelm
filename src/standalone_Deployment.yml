@@ -1,0 +1,99 @@
+# configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  API_PREFIX: "/api/v1"
+  DB_PATH: "/data/tasks.db"
+---
+# secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+type: Opaque
+data:
+  DB_PASSWORD: cGFzc3dvcmQxMjM=  # base64 encoded 'password123'
+---
+# pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tasks-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+# pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tasks-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tasks-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tasks-api
+  template:
+    metadata:
+      labels:
+        app: tasks-api
+    spec:
+      containers:
+      - name: tasks-api
+        image: tasks-api:1.0
+        ports:
+        - containerPort: 5000
+        env:
+        - name: API_PREFIX
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: API_PREFIX
+        - name: DB_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_PATH
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: DB_PASSWORD
+        volumeMounts:
+        - name: tasks-storage
+          mountPath: /data
+      volumes:
+      - name: tasks-storage
+        persistentVolumeClaim:
+          claimName: tasks-pvc
+---
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: tasks-api
+spec:
+  selector:
+    app: tasks-api
+  ports:
+  - port: 80
+    targetPort: 5000
+  type: LoadBalancer
