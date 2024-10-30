@@ -19,7 +19,7 @@ metadata:
     {{- include "tasks-api.labels" . | nindent 4 }}
 type: Opaque
 data:
-  DB_PASSWORD: {{ .Values.database.password }}
+  DB_PASSWORD: {{ .Values.database.password | b64enc }}
 
 ---
 # templates/pvc.yaml

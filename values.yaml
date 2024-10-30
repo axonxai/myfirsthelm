@@ -30,7 +30,7 @@ database:
 
 persistence:
   enabled: true
-  storageClass: ""
+  storageClass: "local-storage"
   accessMode: ReadWriteOnce
   size: 1Gi
 
